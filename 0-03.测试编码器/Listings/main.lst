@@ -1,0 +1,130 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              05/25/2025 23:42:11 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE main\main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\system;.\bsp\be
+                    -ep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Ob
+                    -jects\main.obj)
+
+line level    source
+
+   1          #include "config.h"
+   2          #include "timer0.h"
+   3          #include "uart.h"
+   4          #include "delay.h"
+   5          
+   6          #include "encoder.h"
+   7          #include "beep.h"
+   8          #include "oled.h"
+   9          #include "bmp.h"
+  10          
+  11          
+  12          void gpio_init(void)
+  13          {
+  14   1          // P30 - 编码器按下按钮输入
+  15   1          P3M1 |=  (1 << 0);  // 清除 P3.0 的 M1 位
+  16   1          P3M0 &= ~(1 << 0);  // 清除 P3.0 的 M0 位
+  17   1      
+  18   1          // P31 - 蜂鸣器控制输出
+  19   1          P3M1 &= ~(1 << 1);  // 清除 P3.1 的 M1 位
+  20   1          P3M0 |=  (1 << 1);  // 设置 P3.1 的 M0 位 -> 推挽输出
+  21   1      
+  22   1          // P32 - I2C SDA
+  23   1          P3M1 |=  (1 << 2);  // 设置 P3.2 的 M1 位
+  24   1          P3M0 |=  (1 << 2);  // 设置 P3.2 的 M0 位 -> 开漏输出（I2C 要求）
+  25   1      
+  26   1          // P33 - I2C SCL
+  27   1          P3M1 |=  (1 << 3);  // 设置 P3.3 的 M1 位
+  28   1          P3M0 |=  (1 << 3);  // 设置 P3.3 的 M0 位 -> 开漏输出（I2C 要求）
+  29   1      
+  30   1          // P54 - 编码器 A 相输入
+  31   1          P5M1 &= ~(1 << 4);  // 清除 P5.4 的 M1 位
+  32   1          P5M0 &= ~(1 << 4);  // 清除 P5.4 的 M0 位 -> 准双向口（输入）
+  33   1      
+  34   1          // P55 - 编码器 B 相输入
+  35   1          P5M1 &= ~(1 << 5);  // 清除 P5.5 的 M1 位
+  36   1          P5M0 &= ~(1 << 5);  // 清除 P5.5 的 M0 位 -> 准双向口（输入）
+  37   1      }
+  38          #define T38K4HZ  (11059200L / 2 / 38400)
+  39          unsigned int value;
+  40          void main(void)
+  41          {
+  42   1      
+  43   1          gpio_init();
+  44   1      //    UartInit(); 
+  45   1      //    encoder_init();
+  46   1      //    Timer0_Init();
+  47   1      //    Buzzer_Pin_Init(); // 配置引脚
+  48   1      //    PWM_Init();        // 初始化PWM
+  49   1      //    EA = 1; 
+  50   1      //    OLED_Init();//初始化OLED
+  51   1      //    OLED_ColorTurn(0);//0正常显示，1 反色显示
+  52   1      //    OLED_DisplayTurn(0);//0正常显示 1 屏幕翻转显示
+  53   1      //    printf("system ok! \r\n");
+C51 COMPILER V9.60.7.0   MAIN                                                              05/25/2025 23:42:11 PAGE 2   
+
+  54   1         CCON = 0x00; 
+  55   1         CMOD = 0x08; //PCA时钟为系统时钟 
+  56   1         CL = 0x00; 
+  57   1         CH = 0x00; 
+  58   1         CCAPM0 = 0x4d; //PCA模块0为16位定时器模式并使能脉冲输出 
+  59   1         value = T38K4HZ; 
+  60   1         CCAP0L = value; 
+  61   1         CCAP0H = value >> 8; 
+  62   1         value += T38K4HZ; 
+  63   1         CR = 1;  //启动PCA计时器 
+  64   1         EA = 1; 
+  65   1          while(1) 
+  66   1          {   
+  67   2      //      if (KEY == 1 && !key_pressed)
+  68   2      //      {
+  69   2      //        Delay_ms(20);
+  70   2      //        if (KEY == 1)
+  71   2      //        {
+  72   2      //            key_pressed = 1;
+  73   2      //            current_mode = (current_mode == SET_MODE) ? COUNTDOWN_MODE : SET_MODE;
+  74   2      //        }
+  75   2      //      }
+  76   2      //      if (KEY == 0) key_pressed = 0;
+  77   2      
+  78   2      //      if (current_mode == SET_MODE)
+  79   2      //      {
+  80   2      //          Buzzer_Set(0,0);
+  81   2      //          if(encoder_step != 0)
+  82   2      //          {
+  83   2      //            UpdateTime(encoder_step);
+  84   2      //            encoder_step = 0;
+  85   2      //          }
+  86   2      //      }
+  87   2      //      else if (current_mode == COUNTDOWN_MODE)
+  88   2      //      {
+  89   2      //        if(timer_flage >= 100)
+  90   2      //        {
+  91   2      //            timer_flage = 0;
+  92   2      //            UpdateTime(-1);
+  93   2      //            if(time_h == 0 && time_m == 0 && time_s == 0)
+  94   2      //            {
+  95   2      ////              Beep_Note(1, 80, 200);
+  96   2      //              Play_Melody();
+  97   2      //            }
+  98   2      //        }
+  99   2      //      }
+ 100   2      //      ShowTime();
+ 101   2          }   
+ 102   1      }
+ 103          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     82    ----
+   CONSTANT SIZE    =   1024    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

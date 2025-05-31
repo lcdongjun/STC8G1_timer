@@ -1,0 +1,59 @@
+C51 COMPILER V9.60.7.0   TIMER0                                                            05/30/2025 10:55:54 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE TIMER0
+OBJECT MODULE PLACED IN .\Objects\timer0.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE bsp\timer0\timer0.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\s
+                    -ystem;.\bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\timer0.lst) TAB
+                    -S(2) OBJECT(.\Objects\timer0.obj)
+
+line level    source
+
+   1          #include "timer0.h"
+   2          
+   3          #define TIMER_MS 1
+   4          #define TIMER_COUNTS (65536UL - ((FOSC / 12) * TIMER_MS / 1000))
+   5          #define TH0_INIT (TIMER_COUNTS >> 8)
+   6          #define TL0_INIT (TIMER_COUNTS & 0xFF)
+   7          
+   8          volatile unsigned long systick = 0;  // 全局毫秒计数器
+   9          
+  10          void Timer0_Init(void)
+  11          {
+  12   1          TMOD &= 0xF0;    // 定时器0模式1 (16位)
+  13   1          TMOD |= 0x01;
+  14   1      
+  15   1          TH0 = TH0_INIT;
+  16   1          TL0 = TL0_INIT;
+  17   1      
+  18   1          ET0 = 1;  // 开启定时器0中断
+  19   1          TR0 = 1;  // 启动定时器0
+  20   1      }
+  21          
+  22          unsigned long getsystick(void)
+  23          {
+  24   1          return systick;
+  25   1      }
+  26          
+  27          
+  28          void Timer0_ISR(void) interrupt 1
+  29          {
+  30   1          TH0 = TH0_INIT;
+  31   1          TL0 = TL0_INIT;
+  32   1          systick++;
+  33   1      }
+  34          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    113    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      4    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

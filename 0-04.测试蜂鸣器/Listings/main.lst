@@ -1,0 +1,201 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 12:13:22 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE main\main.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\system;.\
+                    -bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) TABS(2) OBJEC
+                    -T(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "config.h"
+   2          #include "timer0.h"
+   3          #include "uart.h"
+   4          #include "delay.h"
+   5          
+   6          #include "encoder.h"
+   7          #include "beep.h"
+   8          #include "oled.h"
+   9          #include "bmp.h"
+  10          
+  11          volatile bit beep_active = 0;        // 蜂鸣器开关状态
+  12          volatile bit beep_on = 0;
+  13          unsigned long t0 = 0,time_update = 0;
+  14          void Handle_Buzzer(bit on);
+  15          
+  16          void gpio_init(void)
+  17          {
+  18   1          // P30 - 编码器按下按钮输入
+  19   1          P3M1 |=  (1 << 0);  // 清除 P3.0 的 M1 位
+  20   1          P3M0 &= ~(1 << 0);  // 清除 P3.0 的 M0 位
+  21   1      
+  22   1          // P31 - 蜂鸣器控制输出
+  23   1          P3M1 &= ~(1 << 1);  // 清除 P3.1 的 M1 位
+  24   1          P3M0 |=  (1 << 1);  // 设置 P3.1 的 M0 位 -> 推挽输出
+  25   1      
+  26   1          // P32 - I2C SDA
+  27   1          P3M1 |=  (1 << 2);  // 设置 P3.2 的 M1 位
+  28   1          P3M0 |=  (1 << 2);  // 设置 P3.2 的 M0 位 -> 开漏输出（I2C 要求）
+  29   1      
+  30   1          // P33 - I2C SCL
+  31   1          P3M1 |=  (1 << 3);  // 设置 P3.3 的 M1 位
+  32   1          P3M0 |=  (1 << 3);  // 设置 P3.3 的 M0 位 -> 开漏输出（I2C 要求）
+  33   1      
+  34   1          // P54 - 编码器 A 相输入
+  35   1          P5M1 &= ~(1 << 4);  // 清除 P5.4 的 M1 位
+  36   1          P5M0 &= ~(1 << 4);  // 清除 P5.4 的 M0 位 -> 准双向口（输入）
+  37   1      
+  38   1          // P55 - 编码器 B 相输入
+  39   1          P5M1 &= ~(1 << 5);  // 清除 P5.5 的 M1 位
+  40   1          P5M0 &= ~(1 << 5);  // 清除 P5.5 的 M0 位 -> 准双向口（输入）
+  41   1      }
+  42          // 按键切换模式并控制蜂鸣器
+  43          void Handle_KeyPress(){
+  44   1          static bit key_last = 0;
+  45   1          static unsigned long key_down_time = 0;
+  46   1      
+  47   1          if (KEY == 1) {
+  48   2              if (!key_last) {
+  49   3                  key_last = 1;
+  50   3                  key_down_time = getsystick();  // 记录按下时间
+  51   3              } else {
+  52   3                  if (getsystick() - key_down_time >= 1200) {  // 长按 1.2 秒
+  53   4                      current_mode = (current_mode == SET_MODE) ? COUNTDOWN_MODE : SET_MODE;
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 12:13:22 PAGE 2   
+
+  54   4                      OLED_Clear();
+  55   4                      PWM_Set(1200, 50);
+  56   4                      PWM_ON();
+  57   4                      Delay_ms(100);
+  58   4                      PWM_OFF();
+  59   4                      ShowTime();
+  60   4                      while (KEY == 1);
+  61   4                      key_last = 0;
+  62   4                      beep_on = 0;
+  63   4                  }
+  64   3              }
+  65   2          } else {
+  66   2              key_last = 0;
+  67   2          }
+  68   1      }
+  69          // 旋转编码器设置时间
+  70          void Handle_Encoder() {
+  71   1          if (sampling_ready)
+  72   1          {
+  73   2              int sum = 0;
+  74   2              char i = 0;
+  75   2              for (i = 0; i < SAMPLE_COUNT; i++)
+  76   2                  sum += encoder_samples[i];
+  77   2      
+  78   2              if (sum > 0)
+  79   2                  encoder_step = +1;
+  80   2              else if (sum < 0)
+  81   2                  encoder_step = -1;
+  82   2              else
+  83   2                  encoder_step = 0; // 干扰忽略
+  84   2      
+  85   2              sampling_ready = 0;
+  86   2          } 
+  87   1          if (current_mode == SET_MODE && encoder_step != 0) {
+  88   2              PWM_Set(1400, 50);
+  89   2              PWM_ON();
+  90   2              Delay_ms(50);
+  91   2              PWM_OFF();
+  92   2              UpdateTime(encoder_step*10);
+  93   2              encoder_step = 0;
+  94   2          }
+  95   1      }
+  96          
+  97          // 倒计时逻辑
+  98          void Handle_Countdown() {
+  99   1          if (current_mode == COUNTDOWN_MODE && getsystick() - time_update >= 1000) {
+ 100   2              time_update = getsystick();
+ 101   2              UpdateTime(-1);
+ 102   2              if (time_h == 0 && time_m == 0 && time_s == 1 && !beep_active) {
+ 103   3                  beep_on = 1;
+ 104   3              }
+ 105   2          }
+ 106   1      }
+ 107          
+ 108          // 蜂鸣器控制
+ 109          void Handle_Buzzer(bit on)
+ 110          {
+ 111   1          static unsigned long t0 = 0;
+ 112   1          unsigned long elapsed;
+ 113   1      
+ 114   1          if (on)
+ 115   1          {
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 12:13:22 PAGE 3   
+
+ 116   2              if (!beep_active)
+ 117   2              {
+ 118   3                  beep_active = 1;
+ 119   3                  t0 = getsystick();  // 初次开启蜂鸣器，记录起始时间
+ 120   3              }
+ 121   2      
+ 122   2              elapsed = getsystick() - t0;
+ 123   2      
+ 124   2              if (elapsed < 250)
+ 125   2                  PWM_Set(1200, 50);
+ 126   2              else if (elapsed < 500)
+ 127   2                  PWM_Set(1000, 50);
+ 128   2              else if (elapsed < 750)
+ 129   2                  PWM_Set(800, 50);
+ 130   2              else if (elapsed < 1000)
+ 131   2                  PWM_Set(600, 50);
+ 132   2              else if (elapsed < 1250)
+ 133   2                  PWM_Set(400, 50);
+ 134   2              else
+ 135   2                  t0 = getsystick();  // 重置时间，重新开始一轮节奏
+ 136   2      
+ 137   2              PWM_ON(); // 确保始终保持开启
+ 138   2          }
+ 139   1          else
+ 140   1          {
+ 141   2              PWM_OFF();
+ 142   2              beep_active = 0;
+ 143   2              t0 = getsystick(); // 也可清零计时，防止脉冲残留
+ 144   2          }
+ 145   1      }
+ 146          
+ 147          
+ 148          void main(void)
+ 149          {
+ 150   1      
+ 151   1          gpio_init();
+ 152   1          encoder_init();
+ 153   1          Timer0_Init();
+ 154   1          OLED_Init();//初始化OLED
+ 155   1          OLED_ColorTurn(0);//0正常显示，1 反色显示
+ 156   1          OLED_DisplayTurn(0);//0正常显示 1 屏幕翻转显示
+ 157   1          BEEP = 0;
+ 158   1          PWM_Set(1200, 50);
+ 159   1          EA = 1; 
+ 160   1          time_update = getsystick();
+ 161   1          while(1) 
+ 162   1          {
+ 163   2              Handle_KeyPress();
+ 164   2              Handle_Encoder();
+ 165   2              Handle_Countdown();
+ 166   2              Handle_Buzzer(beep_on);
+ 167   2              ShowTime();
+ 168   2          }
+ 169   1      }
+ 170          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    794    ----
+   CONSTANT SIZE    =   1024    ----
+   XDATA SIZE       =     16       7
+   PDATA SIZE       =   ----    ----
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 12:13:22 PAGE 4   
+
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      3       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

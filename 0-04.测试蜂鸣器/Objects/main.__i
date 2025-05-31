@@ -1,0 +1,1 @@
+"main\main.c" LARGE OPTIMIZE (8,SPEED) BROWSE INCDIR(.\main;.\system;.\bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) TABS (2) OBJECT(.\Objects\main.obj)

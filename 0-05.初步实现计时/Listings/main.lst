@@ -1,0 +1,267 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 21:47:54 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE main\main.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\system;.\
+                    -bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) TABS(2) OBJEC
+                    -T(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "config.h"
+   2          #include "timer0.h"
+   3          #include "uart.h"
+   4          #include "delay.h"
+   5          
+   6          #include "encoder.h"
+   7          #include "beep.h"
+   8          #include "oled.h"
+   9          #include "bmp.h"
+  10          
+  11          volatile bit beep_active = 0;        // 蜂鸣器开关状态
+  12          volatile bit beep_on = 0;
+  13          unsigned long t0 = 0,time_update = 0;
+  14          void Handle_Buzzer(bit on);
+  15          
+  16          #define AUTO_SLEEP_TIMEOUT_MS 30000
+  17          volatile unsigned long last_user_tick = 0;  // 记录上次用户操作时间
+  18          
+  19          void gpio_init(void)
+  20          {
+  21   1          // P30 - 编码器按下按钮输入
+  22   1          P3M1 |=  (1 << 0);  // 清除 P3.0 的 M1 位
+  23   1          P3M0 &= ~(1 << 0);  // 清除 P3.0 的 M0 位
+  24   1      
+  25   1          // P31 - 蜂鸣器控制输出
+  26   1          P3M1 &= ~(1 << 1);  // 清除 P3.1 的 M1 位
+  27   1          P3M0 |=  (1 << 1);  // 设置 P3.1 的 M0 位 -> 推挽输出
+  28   1      
+  29   1          // P32 - I2C SDA
+  30   1          P3M1 |=  (1 << 2);  // 设置 P3.2 的 M1 位
+  31   1          P3M0 |=  (1 << 2);  // 设置 P3.2 的 M0 位 -> 开漏输出（I2C 要求）
+  32   1      
+  33   1          // P33 - I2C SCL
+  34   1          P3M1 |=  (1 << 3);  // 设置 P3.3 的 M1 位
+  35   1          P3M0 |=  (1 << 3);  // 设置 P3.3 的 M0 位 -> 开漏输出（I2C 要求）
+  36   1      
+  37   1          // P54 - 编码器 A 相输入
+  38   1          P5M1 &= ~(1 << 4);  // 清除 P5.4 的 M1 位
+  39   1          P5M0 &= ~(1 << 4);  // 清除 P5.4 的 M0 位 -> 准双向口（输入）
+  40   1      
+  41   1          // P55 - 编码器 B 相输入
+  42   1          P5M1 &= ~(1 << 5);  // 清除 P5.5 的 M1 位
+  43   1          P5M0 &= ~(1 << 5);  // 清除 P5.5 的 M0 位 -> 准双向口（输入）
+  44   1      }
+  45          // 按键切换模式并控制蜂鸣器
+  46          void Handle_KeyPress(){
+  47   1          static bit key_last = 0;
+  48   1          static unsigned long key_down_time = 0;
+  49   1      
+  50   1          if (KEY == 1) {
+  51   2              if (!key_last) {
+  52   3                  key_last = 1;
+  53   3                  key_down_time = getsystick();  // 记录按下时间
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 21:47:54 PAGE 2   
+
+  54   3              } else {
+  55   3                  if (getsystick() - key_down_time >= 1200) {  // 长按 1.2 秒
+  56   4                      current_mode = (current_mode == SET_MODE) ? COUNTDOWN_MODE : SET_MODE;
+  57   4                      last_user_tick = getsystick();
+  58   4                      OLED_Clear();
+  59   4                      PWM_Set(1200, 50);
+  60   4                      PWM_ON();
+  61   4                      Delay_ms(100);
+  62   4                      PWM_OFF();
+  63   4                      ShowTime();
+  64   4                      while (KEY == 1);
+  65   4                      key_last = 0;
+  66   4                      beep_on = 0;
+  67   4                  }
+  68   3              }
+  69   2          } else {
+  70   2              key_last = 0;
+  71   2          }
+  72   1      }
+  73          // 旋转编码器设置时间
+  74          void Handle_Encoder()
+  75          {
+  76   1          if (sampling_ready)
+  77   1          {
+  78   2              int sum = 0;
+  79   2              char i = 0;
+  80   2              for (i = 0; i < SAMPLE_COUNT; i++)
+  81   2                  sum += encoder_samples[i];
+  82   2      
+  83   2              if (sum > 0)
+  84   2                  encoder_step = +1;
+  85   2              else if (sum < 0)
+  86   2                  encoder_step = -1;
+  87   2              else
+  88   2                  encoder_step = 0; // 干扰忽略
+  89   2      
+  90   2              sampling_ready = 0;
+  91   2          } 
+  92   1          if (current_mode == SET_MODE && encoder_step != 0) {
+  93   2              last_user_tick = getsystick();
+  94   2              PWM_Set(1400, 50);
+  95   2              PWM_ON();
+  96   2              Delay_ms(50);
+  97   2              PWM_OFF();
+  98   2              UpdateTime(encoder_step*20);
+  99   2              encoder_step = 0;
+ 100   2          }
+ 101   1      }
+ 102          
+ 103          // 倒计时逻辑
+ 104          void Handle_Countdown() {
+ 105   1          if (current_mode == COUNTDOWN_MODE && getsystick() - time_update >= 1000) {
+ 106   2              time_update = getsystick();
+ 107   2              UpdateTime(-1);
+ 108   2              if (time_h == 0 && time_m == 0 && time_s == 1 && !beep_active) {
+ 109   3                  beep_on = 1;
+ 110   3              }
+ 111   2          }
+ 112   1      }
+ 113          
+ 114          const uint16_t nokia_melody[] = {
+ 115              1319, 1175, 1047, 1175, 1319, 1319, 1319,
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 21:47:54 PAGE 3   
+
+ 116              1175, 1175, 1175, 1319, 1568, 1568
+ 117          };
+ 118          
+ 119          
+ 120          // 蜂鸣器控制
+ 121          void Handle_Buzzer(bit on)
+ 122          {
+ 123   1          static unsigned long t0 = 0;
+ 124   1          unsigned long elapsed;
+ 125   1      
+ 126   1          if (on)
+ 127   1          {
+ 128   2              if (!beep_active)
+ 129   2              {
+ 130   3                  beep_active = 1;
+ 131   3                  t0 = getsystick();  // 初次开启蜂鸣器，记录起始时间
+ 132   3              }
+ 133   2      
+ 134   2              elapsed = getsystick() - t0;
+ 135   2      
+ 136   2              if (elapsed < 200)
+ 137   2                  PWM_Set(nokia_melody[0], 50);
+ 138   2              else if (elapsed < 400)
+ 139   2                  PWM_Set(nokia_melody[1], 50);
+ 140   2              else if (elapsed < 600)
+ 141   2                  PWM_Set(nokia_melody[2], 50);
+ 142   2              else if (elapsed < 800)
+ 143   2                  PWM_Set(nokia_melody[3], 50);
+ 144   2              else if (elapsed < 1000)
+ 145   2                  PWM_Set(nokia_melody[4], 50); 
+ 146   2              else if (elapsed < 1200)
+ 147   2                  PWM_Set(nokia_melody[5], 50);   
+ 148   2              else if (elapsed < 1400)
+ 149   2                  PWM_Set(nokia_melody[6], 50);   
+ 150   2              else if (elapsed < 1800)
+ 151   2                  PWM_Set(nokia_melody[7], 50);   
+ 152   2              else if (elapsed < 2000)
+ 153   2                  PWM_Set(nokia_melody[8], 50);   
+ 154   2              else if (elapsed < 2200)
+ 155   2                  PWM_Set(nokia_melody[9], 50);   
+ 156   2              else if (elapsed < 2400)
+ 157   2                  PWM_Set(nokia_melody[10], 50);
+ 158   2              else if (elapsed < 2600)
+ 159   2                  PWM_Set(nokia_melody[11], 50);  
+ 160   2              else if (elapsed < 2800)
+ 161   2                  PWM_Set(nokia_melody[12], 50);  
+ 162   2              
+ 163   2              else
+ 164   2                  t0 = getsystick();  // 重置时间，重新开始一轮节奏
+ 165   2      
+ 166   2              PWM_ON(); // 确保始终保持开启
+ 167   2          }
+ 168   1          else
+ 169   1          {
+ 170   2              PWM_OFF();
+ 171   2              beep_active = 0;
+ 172   2              t0 = getsystick(); // 也可清零计时，防止脉冲残留
+ 173   2          }
+ 174   1      }
+ 175          
+ 176          void Check_Inactivity_Sleep(void)
+ 177          {
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 21:47:54 PAGE 4   
+
+ 178   1          if (current_mode != COUNTDOWN_MODE)  // 倒计时模式不自动关机
+ 179   1          {
+ 180   2              if (getsystick() - last_user_tick >= AUTO_SLEEP_TIMEOUT_MS)
+ 181   2              {
+ 182   3                  OLED_Clear();  // 可选：关屏
+ 183   3                  PWM_OFF();     // 可选：关闭蜂鸣器
+ 184   3      
+ 185   3                  PCON |= 0x02;  // 设置掉电位
+ 186   3                  _nop_();       // 掉电后立即进入中断
+ 187   3                  _nop_();
+ 188   3                
+ 189   3                  gpio_init();
+ 190   3                  encoder_init();
+ 191   3                  Timer0_Init();
+ 192   3                  OLED_Init();//初始化OLED
+ 193   3                  OLED_ColorTurn(0);//0正常显示，1 反色显示
+ 194   3                  OLED_DisplayTurn(0);//0正常显示 1 屏幕翻转显示
+ 195   3                  BEEP = 0;
+ 196   3                  PWM_Set(1200, 50);
+ 197   3                  last_user_tick = getsystick();  // 防止刚唤醒又进入掉电
+ 198   3                  EA = 1;        // 唤醒后重新开启中断
+ 199   3              }
+ 200   2          }
+ 201   1      }
+ 202          #define LVD3V0  0x03 //LVD@3.0V
+ 203          #define LVDF  0x20 
+ 204          void main(void)
+ 205          {
+ 206   1      
+ 207   1          gpio_init();
+ 208   1          encoder_init();
+ 209   1          Timer0_Init();
+ 210   1          OLED_Init();//初始化OLED
+ 211   1          OLED_ColorTurn(0);//0正常显示，1 反色显示
+ 212   1          OLED_DisplayTurn(0);//0正常显示 1 屏幕翻转显示
+ 213   1          BEEP = 0;
+ 214   1          PWM_Set(1200, 50);
+ 215   1          RSTCFG = LVD3V0;  // 设置 LVD 阈值为 3.0V，不使能复位
+ 216   1          ELVD = 1;         // 开启 LVD 中断
+ 217   1          EA = 1; 
+ 218   1          time_update = getsystick();
+ 219   1          while(1) 
+ 220   1          {
+ 221   2              Handle_KeyPress();
+ 222   2              Handle_Encoder();
+ 223   2              Handle_Countdown();
+ 224   2              Handle_Buzzer(beep_on);
+ 225   2              Check_Inactivity_Sleep(); 
+ 226   2              ShowTime();
+ 227   2          }
+ 228   1      }
+ 229          
+ 230          void Lvd_Isr() interrupt 6  
+ 231          { 
+ 232   1        PCON &= ~LVDF; // 清中断标志 
+ 233   1      
+ 234   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1186    ----
+   CONSTANT SIZE    =   1024    ----
+C51 COMPILER V9.60.7.0   MAIN                                                              05/30/2025 21:47:54 PAGE 5   
+
+   XDATA SIZE       =     46       7
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      3       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

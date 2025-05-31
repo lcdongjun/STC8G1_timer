@@ -1,0 +1,58 @@
+C51 COMPILER V9.60.7.0   ENCODER                                                           05/25/2025 23:18:20 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE ENCODER
+OBJECT MODULE PLACED IN .\Objects\encoder.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE bsp\encoder\encoder.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\syste
+                    -m;.\bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\encoder.lst) TABS(2
+                    -) OBJECT(.\Objects\encoder.obj)
+
+line level    source
+
+   1          #include "encoder.h"
+   2          #include "uart.h"
+   3          #include "oled.h"
+   4          
+   5          #define EX2 0x10
+   6          #define EX3 0x20
+   7          #define EX4 0x40
+   8          
+   9          
+  10          
+  11          volatile int time_h = 0;
+  12          volatile int time_m = 0;
+  13          volatile int time_s = 0;
+  14          volatile char encoder_step = 0;  // +10 À≥ ±’Î£¨-10 ƒÊ ±’Î
+  15          
+  16          volatile bit key_pressed = 0;
+  17          enum Mode current_mode = SET_MODE;
+  18          
+  19          void encoder_init(void)
+  20          {
+  21   1        INTCLKO = EX2;
+  22   1      }
+  23          
+  24          void INT2_Isr() interrupt 10
+  25          {
+  26   1          if (current_mode == SET_MODE)
+  27   1          {
+  28   2              if (ENCODER_B)
+  29   2                  encoder_step = 10;
+  30   2              else
+  31   2                  encoder_step = -10;
+  32   2          }
+  33   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     24    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

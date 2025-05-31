@@ -1,0 +1,88 @@
+C51 COMPILER V9.60.7.0   UART                                                              05/25/2025 23:18:20 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN .\Objects\uart.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE system\uart.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\system;.\bsp\
+                    -beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\uart.lst) TABS(2) OBJECT(.\
+                    -Objects\uart.obj)
+
+line level    source
+
+   1          #include "uart.h"
+   2          
+   3          #define BRT (65536 - FOSC / 115200 / 4) 
+   4          
+   5           
+   6          bit busy; 
+   7          char wptr; 
+   8          char rptr; 
+   9          char buffer[16]; 
+  10          
+  11          
+  12          void UartInit() 
+  13          { 
+  14   1        //串口1使用定时器1（模式0）做波特率发生器
+  15   1        SCON = 0x50;
+  16   1        TMOD = 0x00;
+  17   1        TL1 = BRT;
+  18   1        TH1 = BRT >> 8;
+  19   1        TR1 = 1;
+  20   1        AUXR |= (1<<6);
+  21   1        wptr = 0x00;
+  22   1        rptr = 0x00;
+  23   1        busy = 0;
+  24   1      } 
+  25          void UartSend(char dat) 
+  26          { 
+  27   1        while (busy); 
+  28   1        busy = 1; 
+  29   1        SBUF = dat; 
+  30   1      } 
+  31          void UartSendStr(char *p) 
+  32          { 
+  33   1        while (*p) 
+  34   1        { 
+  35   2          UartSend(*p++); 
+  36   2        } 
+  37   1      }
+  38          
+  39          
+  40          void UartIsr() interrupt 4  
+  41          { 
+  42   1        if (TI) 
+  43   1        { 
+  44   2          TI = 0; 
+  45   2          busy = 0; 
+  46   2        } 
+  47   1        if (RI) 
+  48   1        { 
+  49   2          RI = 0; 
+  50   2          buffer[wptr++] = SBUF; 
+  51   2          wptr &= 0x0f; 
+  52   2        } 
+  53   1      }
+C51 COMPILER V9.60.7.0   UART                                                              05/25/2025 23:18:20 PAGE 2   
+
+  54          
+  55          char putchar(char ch)
+  56          {
+  57   1          SBUF = ch;
+  58   1          while(TI == 0);
+  59   1          TI = 0;
+  60   1          return ch;
+  61   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    122    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

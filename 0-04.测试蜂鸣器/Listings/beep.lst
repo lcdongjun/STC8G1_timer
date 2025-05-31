@@ -1,0 +1,113 @@
+C51 COMPILER V9.60.7.0   BEEP                                                              05/30/2025 12:00:19 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE BEEP
+OBJECT MODULE PLACED IN .\Objects\beep.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE bsp\beep\beep.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\syste
+                    -m;.\bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\beep.lst) TABS(2) O
+                    -BJECT(.\Objects\beep.obj)
+
+line level    source
+
+   1          #include "beep.h"
+   2          #include "uart.h"
+   3          
+   4          
+   5          unsigned char  highTicks = 0;
+   6          unsigned char  lowTicks = 0;
+   7          unsigned char  pwmCounter = 0;
+   8          unsigned int  totalTicks = 0;
+   9          unsigned int  reload = 0;
+  10          bit pwmHigh = 1;
+  11          
+  12          // ========== 核心封装函数：设置PWM频率和占空比 ==========
+  13          void PWM_Set(unsigned int freq_hz, unsigned char duty_percent)
+  14          {
+  15   1          unsigned long period_us;
+  16   1          unsigned int pwmInterval_us;
+  17   1      
+  18   1          // 限制 duty 范围（1 ~ 99）
+  19   1          if (duty_percent < 1) duty_percent = 1;
+  20   1          if (duty_percent > 99) duty_percent = 99;
+  21   1      
+  22   1          // 计算周期：1s = 1,000,000us
+  23   1          period_us = 1000000UL / freq_hz;
+  24   1      
+  25   1          //定时器中断周期在 50us 左右
+  26   1          pwmInterval_us = 50;
+  27   1      
+  28   1          // 总tick数 = 总周期 / 每tick间隔
+  29   1          totalTicks = period_us / pwmInterval_us;
+  30   1          highTicks = (totalTicks * duty_percent) / 100;
+  31   1          lowTicks = totalTicks - highTicks;
+  32   1      
+  33   1          // 设置 Timer1 为 pwmInterval_us（50us）中断周期
+  34   1          TMOD &= 0x0F;
+  35   1          TMOD |= 0x10;  // 定时器1，16位
+  36   1          
+  37   1          reload = 65536 - (FOSC / 12 / 1000000 * pwmInterval_us);
+  38   1          TH1 = reload >> 8;
+  39   1          TL1 = reload & 0xFF;
+  40   1      
+  41   1          TR1 = 1;
+  42   1          ET1 = 1;
+  43   1          EA  = 1;
+  44   1      }
+  45          
+  46          void PWM_OFF(void)
+  47          {   BEEP = 0;
+  48   1          TR1 = 0;
+  49   1          ET1 = 0;
+  50   1      }
+  51          void PWM_ON(void)
+  52          {
+  53   1          BEEP = 1;
+C51 COMPILER V9.60.7.0   BEEP                                                              05/30/2025 12:00:19 PAGE 2   
+
+  54   1          TR1 = 1;
+  55   1          ET1 = 1;
+  56   1      }
+  57          // ========== 定时器1中断服务：生成PWM ==========
+  58          void TM1_Isr(void) interrupt 3
+  59          {
+  60   1          // 重载计数值（保持 50us 中断周期）
+  61   1          reload = 65536 - (FOSC / 12 / 1000000 * 50);
+  62   1          TH1 = reload >> 8;
+  63   1          TL1 = reload & 0xFF;
+  64   1      
+  65   1          pwmCounter++;
+  66   1          if (pwmHigh)
+  67   1          {
+  68   2              if (pwmCounter >= highTicks)
+  69   2              {
+  70   3                  pwmCounter = 0;
+  71   3                  pwmHigh = 0;
+  72   3                  BEEP = 0;
+  73   3              }
+  74   2          }
+  75   1          else
+  76   1          {
+  77   2              if (pwmCounter >= lowTicks)
+  78   2              {
+  79   3                  pwmCounter = 0;
+  80   3                  pwmHigh = 1;
+  81   3                  BEEP = 1;
+  82   3              }
+  83   2          }
+  84   1      }
+  85          
+  86          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    310    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      7       7
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

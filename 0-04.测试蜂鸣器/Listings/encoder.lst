@@ -1,0 +1,86 @@
+C51 COMPILER V9.60.7.0   ENCODER                                                           05/30/2025 12:13:01 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE ENCODER
+OBJECT MODULE PLACED IN .\Objects\encoder.obj
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE bsp\encoder\encoder.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.
+                    -\system;.\bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\encoder.lst) 
+                    -TABS(2) OBJECT(.\Objects\encoder.obj)
+
+line level    source
+
+   1          #include "encoder.h"
+   2          #include "uart.h"
+   3          #include "oled.h"
+   4          
+   5          #define EX2 0x10
+   6          #define EX3 0x20
+   7          #define EX4 0x40
+   8          
+   9          
+  10          
+  11          char encoder_samples[SAMPLE_COUNT] = {0};
+  12          char sample_index = 0;
+  13          bit sampling_ready = 0;
+  14          
+  15          
+  16          
+  17          volatile int time_h = 0;
+  18          volatile int time_m = 0;
+  19          volatile int time_s = 0;
+  20          volatile long encoder_step = 0;
+  21          
+  22          volatile bit key_pressed = 0;
+  23          enum Mode current_mode = SET_MODE;
+  24          
+  25          void encoder_init(void)
+  26          {
+  27   1        INTCLKO = EX2;
+  28   1      }
+  29          
+  30          void INT2_Isr() interrupt 10
+  31          {
+  32   1      //    if (current_mode == SET_MODE)
+  33   1      //    {
+  34   1      //        if (ENCODER_B)
+  35   1      //            encoder_step++;
+  36   1      //        else
+  37   1      //            encoder_step --;
+  38   1      //    }
+  39   1          
+  40   1          if (current_mode == SET_MODE)
+  41   1          {
+  42   2              char direction = 0;
+  43   2      
+  44   2              // 根据B相判断方向
+  45   2              if (ENCODER_B)
+  46   2                  direction = +1;
+  47   2              else
+  48   2                  direction = -1;
+  49   2      
+  50   2              // 存入采样缓冲
+  51   2              encoder_samples[sample_index++] = direction;
+  52   2      
+  53   2              if (sample_index >= SAMPLE_COUNT)
+C51 COMPILER V9.60.7.0   ENCODER                                                           05/30/2025 12:13:01 PAGE 2   
+
+  54   2              {
+  55   3                  sample_index = 0;
+  56   3                  sampling_ready = 1;
+  57   3              }
+  58   2          }
+  59   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    108    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     22       1
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
