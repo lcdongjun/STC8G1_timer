@@ -9,8 +9,8 @@ volatile unsigned long systick = 0;  // 全局毫秒计数器
 
 void Timer0_Init(void)
 {
-    TMOD &= 0xF0;    // 定时器0模式1 (16位)
-    TMOD |= 0x01;
+    // TMOD &= 0xF0;
+    // TMOD |= 0x01;
 
     TH0 = TH0_INIT;
     TL0 = TL0_INIT;
@@ -27,8 +27,8 @@ unsigned long getsystick(void)
 
 void Timer0_ISR(void) interrupt 1
 {
-    TH0 = TH0_INIT;
-    TL0 = TL0_INIT;
-		systick++;
+    // TH0 = TH0_INIT;
+    // TL0 = TL0_INIT;
+    systick++;
 }
 

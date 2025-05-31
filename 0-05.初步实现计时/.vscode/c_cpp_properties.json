@@ -1,0 +1,43 @@
+{
+    "configurations": [
+        {
+            "name": "Target 1",
+            "includePath": [
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\main",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\system",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\bsp\\beep",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\bsp\\eeprom",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\bsp\\oled",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\bsp\\encoder",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时\\bsp\\timer0",
+                "e:\\github_code\\STC8G1计时器\\0-05.初步实现计时"
+            ],
+            "defines": [
+                "__C51__",
+                "__VSCODE_C51__",
+                "reentrant=",
+                "compact=",
+                "small=",
+                "large=",
+                "data=",
+                "idata=",
+                "pdata=",
+                "bdata=",
+                "xdata=",
+                "code=",
+                "bit=char",
+                "sbit=char",
+                "sfr=char",
+                "sfr16=int",
+                "sfr32=int",
+                "interrupt=",
+                "using=",
+                "_at_=",
+                "_priority_=",
+                "_task_="
+            ],
+            "intelliSenseMode": "${default}"
+        }
+    ],
+    "version": 4
+}

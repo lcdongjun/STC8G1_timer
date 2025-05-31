@@ -375,8 +375,13 @@ void UpdateTime(int delta)
 
 void ShowTime(void)
 {
-    sprintf(time_buf, "%02d:%02d:%02d", time_h, time_m, time_s);
-    OLED_ShowString(0, 2, time_buf, 32); // ◊÷∫≈32£¨æ”÷–œ‘ æ
+	static uint8_t last_time = 0;
+	if(last_time != time_s)
+	{
+		sprintf(time_buf, "%02d:%02d:%02d", time_h, time_m, time_s);
+		OLED_ShowString(0, 2, time_buf, 32); // ◊÷∫≈32£¨æ”÷–œ‘ æ
+		last_time = time_s;
+	}
 }
 
 

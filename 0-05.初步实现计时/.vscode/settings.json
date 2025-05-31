@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "config.h": "c",
+        "timer0.h": "c",
+        "delay.h": "c",
+        "uart.h": "c",
+        "beep.h": "c"
+    }
+}
