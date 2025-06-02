@@ -1,11 +1,11 @@
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 1   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 1   
 
 
-C51 COMPILER V9.54, COMPILATION OF MODULE OLED
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE OLED
 OBJECT MODULE PLACED IN .\Objects\oled.obj
-COMPILER INVOKED BY: D:\keil5\C51\BIN\C51.EXE bsp\oled\oled.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\system;.\bs
-                    -p\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\oled.lst) TABS(2) OBJECT(
-                    -.\Objects\oled.obj)
+COMPILER INVOKED BY: D:\mcu\Keil_v5\C51\BIN\C51.EXE bsp\oled\oled.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\main;.\syste
+                    -m;.\bsp\beep;.\bsp\eeprom;.\bsp\oled;.\bsp\encoder;.\bsp\timer0) DEBUG OBJECTEXTEND PRINT(.\Listings\oled.lst) TABS(2) O
+                    -BJECT(.\Objects\oled.obj)
 
 line level    source
 
@@ -62,7 +62,7 @@ line level    source
   51   1      }
   52          
   53          //ÆðÊ¼ÐÅºÅ
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 2   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 2   
 
   54          void I2C_Start(void)
   55          {
@@ -126,7 +126,7 @@ line level    source
  113   1        I2C_Start();
  114   1        Send_Byte(0x78);
  115   1        I2C_WaitAck();
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 3   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 3   
 
  116   1        if(mode){Send_Byte(0x40);}
  117   1        else{Send_Byte(0x00);}
@@ -190,7 +190,7 @@ line level    source
  175          
  176          //void OLED_WR_Byte(u8 dat,u8 mode)
  177          //{
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 4   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 4   
 
  178          //Start();
  179          //SendData(0x78);
@@ -254,7 +254,7 @@ line level    source
  237   1        {
  238   2          if(i%sizex==0&&sizey!=8) OLED_Set_Pos(x,y++);
  239   2      //    if(sizey==8) OLED_WR_Byte(asc2_0806[c][i],OLED_DATA);//6X8×ÖºÅ
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 5   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 5   
 
  240   2      //    else if(sizey==16) OLED_WR_Byte(asc2_1608[c][i],OLED_DATA);//8x16×ÖºÅ
  241   2      //    else if(sizey==32) OLED_WR_Byte(asc2_3216[c-16][i],OLED_DATA);//ÓÃ»§Ìí¼Ó×ÖºÅ
@@ -318,7 +318,7 @@ line level    source
  299   1      }
 *** WARNING C280 IN LINE 289 OF bsp\oled\oled.c: 'no': unreferenced local variable
  300          
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 6   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 6   
 
  301          
  302          //ÏÔÊ¾Í¼Æ¬
@@ -382,7 +382,7 @@ line level    source
  360          
  361          
  362          uint8_t xdata time_buf[16];
-C51 COMPILER V9.54   OLED                                                                  05/31/2025 16:23:57 PAGE 7   
+C51 COMPILER V9.60.7.0   OLED                                                              06/02/2025 23:22:16 PAGE 7   
 
  363          void UpdateTime(int delta)
  364          {

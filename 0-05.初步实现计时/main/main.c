@@ -16,6 +16,11 @@ void Handle_Buzzer(bit on);
 volatile bit WDT_FLAGE = 1; // 看门狗标志位
 #define AUTO_SLEEP_TIMEOUT_MS 30000
 volatile unsigned long last_user_tick = 0; // 记录上次用户操作时间
+//电池没电图标 32*16
+const unsigned char code BAT_0[] = {
+0x00,0x00,0xFE,0xFE,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0xF6,0xF6,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0x06,0xFE,0xFE,0xFC,0xF0,0xE0,0x00,0x00,0x00,0x00,0x7F,0x7F,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x6B,0x6B,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x60,0x7F,0x7F,0x3F,0x0F,0x07,0x00,0x00/*电池0.bmp*/
+};
+volatile bit BAT_FLAGE = 0;
 
 void gpio_init(void)
 {
@@ -26,7 +31,7 @@ void gpio_init(void)
     // P31 - 蜂鸣器控制输出
     P3M1 &= ~(1 << 1); // 清除 P3.1 的 M1 位
     P3M0 |= (1 << 1);  // 设置 P3.1 的 M0 位 -> 推挽输出
-
+		P3SR &= ~(1 << 1); // 设置 P31 为高速输出
     // P32 - I2C SDA
     P3M1 |= (1 << 2); // 设置 P3.2 的 M1 位
     P3M0 |= (1 << 2); // 设置 P3.2 的 M0 位 -> 开漏输出（I2C 要求）
@@ -79,7 +84,7 @@ void Handle_KeyPress()
             {
                 key_mode = 2;
             }
-            if (duration >= 100 && duration <= 1400)
+            if (duration >= 200 && duration <= 1400)
             {
                 key_mode = 1;
             }
@@ -99,7 +104,7 @@ void Handle_KeyPress()
                 PWM_ON();
                 Delay_ms(50);
                 PWM_OFF();
-                WDT_FLAGE = 0;
+                WDT_FLAGE = 0;//禁止喂狗，实现重启的效果
             }
 
             // 重置所有状态
@@ -135,7 +140,7 @@ void Handle_Encoder()
         PWM_ON();
         Delay_ms(50);
         PWM_OFF();
-        UpdateTime(encoder_step * 20);
+        UpdateTime(encoder_step * 30);
         encoder_step = 0;
     }
 }
@@ -210,7 +215,7 @@ void Handle_Buzzer(bit on)
     {
         PWM_OFF();
         beep_active = 0;
-        t0 = getsystick(); // 也可清零计时，防止脉冲残留
+        t0 = getsystick(); // 清零计时，防止脉冲残留
     }
 }
 
@@ -260,6 +265,7 @@ void main(void)
     WDT_FLAGE = 1; // 清除看门狗标志位
     RSTCFG = LVD3V0; // 设置 LVD 阈值为 3.0V，不使能复位
     ELVD = 1;        // 开启 LVD 中断
+		BAT_FLAGE = 0;   //清除电池没电标志位
     EA = 1;
     time_update = getsystick();
     while (1)
@@ -274,10 +280,13 @@ void main(void)
         Handle_Buzzer(beep_on);
         Check_Inactivity_Sleep();
         ShowTime();
+				if(BAT_FLAGE)
+					OLED_DrawBMP(0,0,32,16,BAT_0);
     }
 }
 
 void Lvd_Isr() interrupt 6
 {
     PCON &= ~LVDF; // 清中断标志
+		BAT_FLAGE = 1;
 }

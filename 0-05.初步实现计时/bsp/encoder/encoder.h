@@ -18,7 +18,7 @@ extern volatile int time_h;
 extern volatile int time_m;
 extern volatile int time_s;
 
-#define SAMPLE_COUNT 5					//重复采样次数
+#define SAMPLE_COUNT 4					//重复采样次数
 extern volatile long encoder_step;//编码器的计数
 extern bit sampling_ready;				//重复采集完成
 extern char encoder_samples[SAMPLE_COUNT];//重复采集的值
